@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Blood Pressure Monitor
 
 A lightweight, mobile-compatible web application for blood pressure monitoring, designed to run on Raspberry Pi with minimal resource usage.
