@@ -1,0 +1,32 @@
+# Server Configuration
+server:
+  host: "0.0.0.0"
+  port: 8080
+
+# Database Configuration
+database:
+  path: "../database/blood_pressure.db"
+
+# Application Settings
+app:
+  name: "Blood Pressure Monitor"
+  version: "1.0.0"
+  max_readings_per_day: 100
+  alert_thresholds:
+    high_systolic: 140
+    low_systolic: 90
+    high_diastolic: 90
+    low_diastolic: 60
+    high_heart_rate: 100
+    low_heart_rate: 60
+
+# Security Settings
+security:
+  password_min_length: 8
+  session_timeout: 3600
+
+# Performance Settings
+performance:
+  cache_enabled: true
+  cache_ttl: 300
+  compression_enabled: true
