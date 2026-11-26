@@ -25,8 +25,8 @@ COPY --from=builder /app/blood_pressure_monitor /app/blood_pressure_monitor
 # Copy config file
 COPY config/config.yaml /app/config/config.yaml
 
-# Copy database directory
-COPY database /app/database
+# Create database directory (will be mounted as volume in production)
+RUN mkdir -p /app/database
 
 # Copy frontend
 COPY frontend /app/frontend
