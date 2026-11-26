@@ -92,17 +92,28 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Check if username already exists
+	var existingID int
+	err := database.DB.QueryRow("SELECT id FROM users WHERE username = ?", user.Username).Scan(&existingID)
+	if err == nil {
+		w.WriteHeader(http.StatusConflict)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Username already exists"})
+		return
+	}
+
 	result, err := database.DB.Exec(
 		"INSERT INTO users (name, username, password) VALUES (?, ?, ?)",
 		user.Name, user.Username, user.Password,
 	)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 		return
 	}
 
 	id, _ := result.LastInsertId()
 	user.ID = int(id)
+	user.Password = "" // Don't return password
 
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(user)

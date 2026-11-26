@@ -1,7 +1,7 @@
 // Blood Pressure Monitor - Simple Vanilla JS App
 
 // API Configuration
-const API_BASE_URL = 'http://localhost:8080/api';
+const API_BASE_URL = '/api';
 
 console.log('Blood Pressure Monitor app loaded');
 
@@ -287,7 +287,7 @@ async function loadDashboardData() {
         renderDashboardContent(summary, trends);
     } catch (err) {
         console.error('Failed to fetch dashboard data:', err);
-        container.querySelector('#dashboardContent').innerHTML = '<p>Error loading dashboard. Make sure the backend server is running on http://localhost:8080</p>';
+        container.querySelector('#dashboardContent').innerHTML = '<p>Error loading dashboard. Make sure the backend server is running.</p>';
     }
 }
 
@@ -360,8 +360,13 @@ function renderDashboardContent(summary, trends) {
         <!-- Full-width chart card -->
         <div class="card" style="margin-top:1.5rem;" id="chartCard">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
-                <h3>7-Day Trends</h3>
-                <div style="display:flex;gap:0.5rem;">
+                <h3 id="chartTitle">7-Day Trends</h3>
+                <div style="display:flex;gap:0.5rem;align-items:center;">
+                    <select id="chartPeriod" onchange="changeChartPeriod(this.value)" style="padding:0.4rem 0.8rem;border-radius:4px;border:1px solid var(--border-color);font-size:0.85rem;">
+                        <option value="7">7 Days</option>
+                        <option value="30">30 Days</option>
+                        <option value="365">1 Year</option>
+                    </select>
                     <button id="resetZoomBtn" class="btn btn-secondary" style="width:auto;padding:0.4rem 0.8rem;font-size:0.85rem;display:none;" onclick="resetChartZoom()">Reset Zoom</button>
                     <button id="fullscreenBtn" class="btn btn-secondary" style="width:auto;padding:0.4rem 0.8rem;font-size:0.85rem;" onclick="openChartFullscreen()">⛶ Fullscreen</button>
                 </div>
@@ -375,7 +380,7 @@ function renderDashboardContent(summary, trends) {
         </div>
     `;
 
-    renderBPChart(readings);
+    renderBPChart(readings, 7);
 }
 
 function formatDateTime(iso) {
@@ -402,7 +407,18 @@ function bpCategory(sys, dia) {
     return 'Normal';
 }
 
-function renderBPChart(allReadings) {
+// Current chart period in days
+let currentChartPeriod = 7;
+
+function changeChartPeriod(days) {
+    currentChartPeriod = parseInt(days);
+    const titles = { 7: '7-Day Trends', 30: '30-Day Trends', 365: 'Yearly Trends' };
+    const titleEl = document.getElementById('chartTitle');
+    if (titleEl) titleEl.textContent = titles[days] || `${days}-Day Trends`;
+    renderBPChart(readings, currentChartPeriod);
+}
+
+function renderBPChart(allReadings, days = 7) {
     // Destroy previous instance
     if (bpChartInstance) {
         bpChartInstance.destroy();
@@ -412,14 +428,17 @@ function renderBPChart(allReadings) {
     const canvas = document.getElementById('bpTrendChart');
     if (!canvas) return;
 
-    // Filter to last 7 days and sort ascending
-    const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    // Filter to selected period and sort ascending
+    const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
     const data = (allReadings || [])
         .filter(r => new Date(r.measurement_time).getTime() >= cutoff)
         .sort((a, b) => new Date(a.measurement_time) - new Date(b.measurement_time));
 
+    const periodLabels = { 7: '7 days', 30: '30 days', 365: 'year' };
+    const periodLabel = periodLabels[days] || `${days} days`;
+
     if (data.length === 0) {
-        canvas.parentElement.innerHTML = '<p style="text-align:center;color:var(--text-secondary);padding:4rem 0;">No readings in the last 7 days. Add a reading to see the chart.</p>';
+        canvas.parentElement.innerHTML = `<p style="text-align:center;color:var(--text-secondary);padding:4rem 0;">No readings in the last ${periodLabel}. Add a reading to see the chart.</p>`;
         return;
     }
 
@@ -855,7 +874,7 @@ async function loadReadings() {
         renderReadingsTable();
     } catch (err) {
         console.error('Failed to fetch readings:', err);
-        container.querySelector('#readingsContent').innerHTML = '<p>Error loading readings. Make sure the backend server is running on http://localhost:8080</p>';
+        container.querySelector('#readingsContent').innerHTML = '<p>Error loading readings. Make sure the backend server is running.</p>';
     }
 }
 

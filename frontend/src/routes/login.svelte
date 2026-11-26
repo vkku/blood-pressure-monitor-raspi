@@ -24,14 +24,14 @@
         loading = true;
 
         try {
-            const response = await fetch('/api/users');
-            const users = await response.json();
+            const response = await fetch('/api/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
 
-            const user = users.find((u: any) => 
-                u.username === username && u.password === password
-            );
-
-            if (user) {
+            if (response.ok) {
+                const user = await response.json();
                 currentUser.set({ id: user.id, name: user.name, username: user.username });
                 if (browser) {
                     localStorage.setItem('currentUser', JSON.stringify(user));
