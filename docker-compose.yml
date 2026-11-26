@@ -1,0 +1,30 @@
+version: "3.8"
+
+services:
+  calibre:
+    image: lscr.io/linuxserver/calibre:latest
+    container_name: calibre
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+      - CUSTOM_USER=vkku
+      - PASSWORD=[ENTER_PASSWORD]
+      - TITLE=vkku-home-library
+    volumes:
+      - /home/vkku/calibre-config:/config
+    ports:
+      - 8080:8080
+      - 8081:8081
+      - 8181:8181
+    restart: unless-stopped
+    
+  blood-pressure-monitor:
+    build: .
+    container_name: blood-pressure-monitor
+    ports:
+      - 8082:8082
+    volumes:
+      - ./database:/app/database
+      - ./config/config.yaml:/app/config.yaml
+    restart: unless-stopped

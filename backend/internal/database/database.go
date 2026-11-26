@@ -12,10 +12,16 @@ var DB *sql.DB
 
 func Connect() error {
 	var err error
-	dbPath := "../database/blood_pressure.db"
+	dbPath := os.Getenv("DB_PATH")
+	if dbPath == "" {
+		dbPath = "../database/blood_pressure.db"
+	}
 	
 	// Ensure database directory exists
-	dbDir := "../database"
+	dbDir := os.Getenv("DB_DIR")
+	if dbDir == "" {
+		dbDir = "../database"
+	}
 	if _, err := os.Stat(dbDir); os.IsNotExist(err) {
 		os.MkdirAll(dbDir, 0755)
 	}

@@ -1,0 +1,13 @@
+.git
+.gitignore
+README.md
+LICENSE
+.dockerignore
+Dockerfile
+docker-compose.yml
+scripts/
+*.bat
+*.sh
+frontend/node_modules
+frontend/package-lock.json
+frontend/.vite

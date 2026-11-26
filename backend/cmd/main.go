@@ -5,11 +5,46 @@ import (
 	"blood_pressure_monitor/internal/handlers"
 	"log"
 	"net/http"
+	"os"
+	"strconv"
 
 	"github.com/gorilla/mux"
+	"gopkg.in/yaml.v2"
 )
 
+type Config struct {
+	Server struct {
+		Host string `yaml:"host"`
+		Port int    `yaml:"port"`
+	} `yaml:"server"`
+}
+
+func loadConfig() (*Config, error) {
+	configPath := os.Getenv("CONFIG_PATH")
+	if configPath == "" {
+		configPath = "../config/config.yaml"
+	}
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		return nil, err
+	}
+
+	var config Config
+	err = yaml.Unmarshal(data, &config)
+	if err != nil {
+		return nil, err
+	}
+
+	return &config, nil
+}
+
 func main() {
+	// Load configuration
+	config, err := loadConfig()
+	if err != nil {
+		log.Fatal("Failed to load config:", err)
+	}
+
 	// Connect to database
 	if err := database.Connect(); err != nil {
 		log.Fatal(err)
@@ -60,11 +95,16 @@ func main() {
 	r.HandleFunc("/api/users/{user_id}/alerts/{alert_id}/read", handlers.MarkAlertAsRead).Methods("PUT")
 
 	// Serve frontend static files
-	r.PathPrefix("/").Handler(http.FileServer(http.Dir("../frontend")))
+	frontendPath := os.Getenv("FRONTEND_PATH")
+	if frontendPath == "" {
+		frontendPath = "../frontend"
+	}
+	r.PathPrefix("/").Handler(http.FileServer(http.Dir(frontendPath)))
 
-	// Start server
-	log.Println("Starting server on :8080")
-	if err := http.ListenAndServe(":8080", r); err != nil {
+	// Start server on configured port
+	addr := config.Server.Host + ":" + strconv.Itoa(config.Server.Port)
+	log.Println("Starting server on", addr)
+	if err := http.ListenAndServe(addr, r); err != nil {
 		log.Fatal(err)
 	}
 }
