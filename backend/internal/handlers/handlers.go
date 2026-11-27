@@ -251,6 +251,43 @@ func createAlert(userID int, alertType, message, severity string) {
 	)
 }
 
+// Delete a reading
+func DeleteReading(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	vars := mux.Vars(r)
+	userID, err := strconv.Atoi(vars["user_id"])
+	if err != nil {
+		http.Error(w, "Invalid user ID", http.StatusBadRequest)
+		return
+	}
+
+	readingID, err := strconv.Atoi(vars["reading_id"])
+	if err != nil {
+		http.Error(w, "Invalid reading ID", http.StatusBadRequest)
+		return
+	}
+
+	// Delete the reading (ensure it belongs to the user)
+	result, err := database.DB.Exec(
+		"DELETE FROM blood_pressure_readings WHERE id = ? AND user_id = ?",
+		readingID, userID,
+	)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		http.Error(w, "Reading not found", http.StatusNotFound)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"status": "deleted"})
+}
+
 // Get alerts for a user
 func GetAlerts(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")

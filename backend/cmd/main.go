@@ -88,6 +88,7 @@ func main() {
 	// Blood pressure reading endpoints
 	r.HandleFunc("/api/users/{user_id}/readings", handlers.GetReadings).Methods("GET")
 	r.HandleFunc("/api/users/{user_id}/readings", handlers.CreateReading).Methods("POST")
+	r.HandleFunc("/api/users/{user_id}/readings/{reading_id}", handlers.DeleteReading).Methods("DELETE")
 	r.HandleFunc("/api/users/{user_id}/readings/daily-trends", handlers.GetDailyTrends).Methods("GET")
 	r.HandleFunc("/api/users/{user_id}/readings/weekly-summary", handlers.GetWeeklySummary).Methods("GET")
 	r.HandleFunc("/api/users/{user_id}/readings/export", handlers.ExportCSV).Methods("GET")

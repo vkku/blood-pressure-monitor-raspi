@@ -13,9 +13,29 @@
     let armUsed = 'left';
     let activityLevel = 'resting';
     let showAdvanced = false;
+    export let isSubmitting = false;
+
+    // Input refs for focusing
+    let systolicInput: HTMLInputElement;
+    let diastolicInput: HTMLInputElement;
+    let heartRateInput: HTMLInputElement;
+
+    function focusSystolic() {
+        systolicInput?.focus();
+    }
+
+    function focusDiastolic() {
+        diastolicInput?.focus();
+    }
+
+    function focusHeartRate() {
+        heartRateInput?.focus();
+    }
 
     function handleSubmit(e: Event) {
         e.preventDefault();
+
+        if (isSubmitting) return; // Prevent double submission
 
         if (!systolic || !diastolic || !heartRate) {
             alert('Please fill in all required fields');
@@ -43,7 +63,7 @@
         dispatch('submit', reading);
     }
 
-    function resetForm() {
+    export function resetForm() {
         systolic = '';
         diastolic = '';
         heartRate = '';
@@ -71,24 +91,24 @@
 </script>
 
 <div class="reading-form">
-    <!-- Live BP Preview -->
+    <!-- Live BP Preview - Clickable to focus inputs -->
     <div class="bp-preview" style="border-color: {bpStatus.color}">
         <div class="bp-values">
-            <div class="bp-main">
+            <button type="button" class="bp-main bp-clickable" on:click={focusSystolic} aria-label="Click to enter systolic">
                 <span class="systolic" style="color: {systolic && parseInt(systolic) >= 140 ? '#ef4444' : 'var(--text-color)'}">{systolic || '---'}</span>
                 <span class="separator">/</span>
-                <span class="diastolic" style="color: {diastolic && parseInt(diastolic) >= 90 ? '#ef4444' : 'var(--text-color)'}">{diastolic || '---'}</span>
-            </div>
+                <span class="diastolic" on:click|stopPropagation={focusDiastolic} style="color: {diastolic && parseInt(diastolic) >= 90 ? '#ef4444' : 'var(--text-color)'}">{diastolic || '---'}</span>
+            </button>
             <div class="bp-unit">mmHg</div>
         </div>
         <div class="bp-status" style="color: {bpStatus.color}; background: {bpStatus.bg}">
             {bpStatus.status}
         </div>
-        <div class="hr-preview">
+        <button type="button" class="hr-preview hr-clickable" on:click={focusHeartRate} aria-label="Click to enter heart rate">
             <span class="hr-icon">❤️</span>
             <span class="hr-value">{heartRate || '--'}</span>
             <span class="hr-unit">bpm</span>
-        </div>
+        </button>
     </div>
 
     <form on:submit={handleSubmit}>
@@ -97,18 +117,20 @@
             <div class="input-group">
                 <label for="systolic">Systolic</label>
                 <div class="number-input">
-                    <button type="button" class="increment-btn" on:click={() => systolic = String(Math.max(50, (parseInt(systolic) || 120) - 1))}>−</button>
+                    <button type="button" class="increment-btn" on:click={() => systolic = String(Math.max(50, (parseInt(systolic) || 120) - 1))} disabled={isSubmitting}>−</button>
                     <input
                         type="number"
                         id="systolic"
+                        bind:this={systolicInput}
                         bind:value={systolic}
                         placeholder="120"
                         min="50"
                         max="250"
                         inputmode="numeric"
                         required
+                        disabled={isSubmitting}
                     />
-                    <button type="button" class="increment-btn" on:click={() => systolic = String(Math.min(250, (parseInt(systolic) || 120) + 1))}>+</button>
+                    <button type="button" class="increment-btn" on:click={() => systolic = String(Math.min(250, (parseInt(systolic) || 120) + 1))} disabled={isSubmitting}>+</button>
                 </div>
                 <span class="input-hint">Top number</span>
             </div>
@@ -116,18 +138,20 @@
             <div class="input-group">
                 <label for="diastolic">Diastolic</label>
                 <div class="number-input">
-                    <button type="button" class="increment-btn" on:click={() => diastolic = String(Math.max(30, (parseInt(diastolic) || 80) - 1))}>−</button>
+                    <button type="button" class="increment-btn" on:click={() => diastolic = String(Math.max(30, (parseInt(diastolic) || 80) - 1))} disabled={isSubmitting}>−</button>
                     <input
                         type="number"
                         id="diastolic"
+                        bind:this={diastolicInput}
                         bind:value={diastolic}
                         placeholder="80"
                         min="30"
                         max="150"
                         inputmode="numeric"
                         required
+                        disabled={isSubmitting}
                     />
-                    <button type="button" class="increment-btn" on:click={() => diastolic = String(Math.min(150, (parseInt(diastolic) || 80) + 1))}>+</button>
+                    <button type="button" class="increment-btn" on:click={() => diastolic = String(Math.min(150, (parseInt(diastolic) || 80) + 1))} disabled={isSubmitting}>+</button>
                 </div>
                 <span class="input-hint">Bottom number</span>
             </div>
@@ -135,18 +159,20 @@
             <div class="input-group">
                 <label for="heartRate">Heart Rate</label>
                 <div class="number-input">
-                    <button type="button" class="increment-btn" on:click={() => heartRate = String(Math.max(30, (parseInt(heartRate) || 72) - 1))}>−</button>
+                    <button type="button" class="increment-btn" on:click={() => heartRate = String(Math.max(30, (parseInt(heartRate) || 72) - 1))} disabled={isSubmitting}>−</button>
                     <input
                         type="number"
                         id="heartRate"
+                        bind:this={heartRateInput}
                         bind:value={heartRate}
                         placeholder="72"
                         min="30"
                         max="220"
                         inputmode="numeric"
                         required
+                        disabled={isSubmitting}
                     />
-                    <button type="button" class="increment-btn" on:click={() => heartRate = String(Math.min(220, (parseInt(heartRate) || 72) + 1))}>+</button>
+                    <button type="button" class="increment-btn" on:click={() => heartRate = String(Math.min(220, (parseInt(heartRate) || 72) + 1))} disabled={isSubmitting}>+</button>
                 </div>
                 <span class="input-hint">Pulse (bpm)</span>
             </div>
@@ -226,8 +252,12 @@
             <button type="button" class="reset-btn" on:click={resetForm}>
                 🔄 Reset
             </button>
-            <button type="submit" class="submit-btn">
-                ✓ Save Reading
+            <button type="submit" class="submit-btn" disabled={isSubmitting}>
+                {#if isSubmitting}
+                    <span class="spinner"></span> Saving...
+                {:else}
+                    ✓ Save Reading
+                {/if}
             </button>
         </div>
     </form>
@@ -259,6 +289,27 @@
         display: flex;
         justify-content: center;
         align-items: baseline;
+    }
+
+    /* Clickable BP preview elements */
+    .bp-clickable,
+    .hr-clickable {
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: var(--spacing-xs);
+        border-radius: var(--radius-md);
+        transition: background-color 0.2s;
+    }
+
+    .bp-clickable:hover,
+    .hr-clickable:hover {
+        background: var(--primary-light);
+    }
+
+    .bp-clickable:active,
+    .hr-clickable:active {
+        transform: scale(0.98);
     }
 
     .bp-main .systolic,
@@ -560,6 +611,29 @@
 
     .submit-btn:active {
         transform: translateY(0);
+    }
+
+    .submit-btn:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+        transform: none;
+    }
+
+    /* Loading Spinner */
+    .spinner {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-top-color: white;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+        margin-right: 8px;
+        vertical-align: middle;
+    }
+
+    @keyframes spin {
+        to { transform: rotate(360deg); }
     }
 
     /* Responsive */

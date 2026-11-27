@@ -61,9 +61,17 @@
         
         if (confirm('Are you sure you want to delete this reading?')) {
             fetch(`/api/users/${user.id}/readings/${id}`, { method: 'DELETE' })
-                .then(() => {
-                    readingsList = readingsList.filter(r => r.id !== id);
-                    readings.set(readingsList);
+                .then(response => {
+                    if (response.ok) {
+                        readingsList = readingsList.filter(r => r.id !== id);
+                        readings.set(readingsList);
+                    } else {
+                        alert('Failed to delete reading');
+                    }
+                })
+                .catch(err => {
+                    console.error('Delete failed:', err);
+                    alert('Failed to delete reading');
                 });
         }
     }

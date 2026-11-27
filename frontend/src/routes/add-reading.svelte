@@ -7,14 +7,20 @@
     const dispatch = createEventDispatcher();
 
     let successMessage = '';
+    let isSubmitting = false;
+    let formComponent: ReadingForm;
 
     async function handleFormSubmit(event: CustomEvent) {
+        if (isSubmitting) return; // Prevent double submission
+        
         const reading = event.detail;
         const user = $currentUser;
         if (!user) {
             dispatch('navigate', 'login');
             return;
         }
+        
+        isSubmitting = true;
         
         try {
             const response = await fetch('/api/users/' + user.id + '/readings', {
@@ -27,15 +33,18 @@
                 const newReading = await response.json();
                 readings.update(current => [newReading, ...current]);
                 successMessage = 'Reading saved successfully!';
+                formComponent?.resetForm();
                 setTimeout(() => {
                     successMessage = '';
-                    dispatch('navigate', 'readings');
-                }, 2000);
+                    dispatch('navigate', 'dashboard');
+                }, 1500);
             } else {
                 alert('Failed to save reading');
+                isSubmitting = false;
             }
         } catch (err) {
             alert('Failed to save reading. Please try again.');
+            isSubmitting = false;
         }
     }
 </script>
@@ -53,6 +62,18 @@
         border-radius: 8px;
         text-align: center;
         margin-bottom: 1rem;
+        animation: slideIn 0.3s ease-out;
+    }
+
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
     }
 
     .voice-input-btn {
@@ -66,10 +87,7 @@
         font-size: 1rem;
         cursor: pointer;
         margin-bottom: 1rem;
-    }
-
-    .voice-input-btn:hover {
-        opacity: 0.9;
+        opacity: 0.6;
     }
 
     .voice-icon {
@@ -81,13 +99,13 @@
     <h1 style="text-align: center; margin-bottom: 2rem;">Record Blood Pressure</h1>
 
     {#if successMessage}
-        <div class="success-message">{successMessage}</div>
+        <div class="success-message">✅ {successMessage}</div>
     {/if}
 
-    <button class="voice-input-btn">
+    <button class="voice-input-btn" disabled>
         <span class="voice-icon">🎤</span>
         Voice Input (Coming Soon)
     </button>
 
-    <ReadingForm on:submit={handleFormSubmit} />
+    <ReadingForm bind:this={formComponent} bind:isSubmitting on:submit={handleFormSubmit} />
 </div>
