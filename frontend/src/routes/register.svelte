@@ -101,12 +101,16 @@
         margin-top: 1rem;
     }
 
-    .link a {
+    .link button {
         color: var(--primary-color);
-        text-decoration: none;
+        background: none;
+        border: none;
+        padding: 0;
+        font: inherit;
+        cursor: pointer;
     }
 
-    .link a:hover {
+    .link button:hover {
         text-decoration: underline;
     }
 </style>
@@ -152,12 +156,12 @@
             />
         </div>
 
-        <button type="submit" {loading}>
+        <button type="submit" disabled={loading}>
             {#if loading} Registering... {:else} Register {/if}
         </button>
     </form>
 
     <p class="link">
-        Already have an account? <a on:click={() => dispatch('navigate', 'login')}>Login</a>
+        Already have an account? <button type="button" class="link-btn" on:click={() => dispatch('navigate', 'login')}>Login</button>
     </p>
 </div>

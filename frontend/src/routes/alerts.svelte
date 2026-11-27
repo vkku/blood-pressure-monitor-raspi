@@ -1,28 +1,18 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import { currentUser } from '../stores/appStore';
-    import { alerts } from '../stores/alertsStore';
-    import { browser } from '$app/environment';
+    import { alerts, type Alert } from '../stores/alertsStore';
     import { createEventDispatcher } from 'svelte';
 
     const dispatch = createEventDispatcher();
-
-    interface Alert {
-        id: number;
-        alert_type: string;
-        message: string;
-        severity: string;
-        is_read: boolean;
-        created_at: string;
-    }
 
     let alertsList: Alert[] = [];
     let loading = true;
 
     onMount(async () => {
-        if (!browser) return;
+        if (typeof window === 'undefined') return;
 
-        const user = currentUser;
+        const user = $currentUser;
         if (!user) {
             dispatch('navigate', 'login');
             return;
@@ -42,7 +32,10 @@
     });
 
     function markAsRead(alertId: number) {
-        fetch(`/api/users/${currentUser.id}/alerts/${alertId}/read`, { method: 'PUT' })
+        const user = $currentUser;
+        if (!user) return;
+        
+        fetch(`/api/users/${user.id}/alerts/${alertId}/read`, { method: 'PUT' })
             .then(() => {
                 alertsList = alertsList.map(a => 
                     a.id === alertId ? { ...a, is_read: true } : a
@@ -116,6 +109,9 @@
         cursor: pointer;
         padding: 0.25rem 0.5rem;
         border-radius: 4px;
+        background: none;
+        border: none;
+        font: inherit;
     }
 
     .mark-read-btn:hover {
@@ -195,7 +191,7 @@
                 <p class="alert-message">{alert.message}</p>
                 {#if !alert.is_read}
                     <p style="text-align: right; margin-top: 0.5rem;">
-                        <span class="mark-read-btn" on:click={() => markAsRead(alert.id)}>✓ Mark as read</span>
+                        <button type="button" class="mark-read-btn" on:click={() => markAsRead(alert.id)}>✓ Mark as read</button>
                     </p>
                 {/if}
             </div>

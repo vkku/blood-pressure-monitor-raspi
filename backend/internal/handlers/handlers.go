@@ -325,19 +325,29 @@ func GetDailyTrends(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get readings for the last 7 days
-	rows, err := database.DB.Query(
-		`SELECT DATE(measurement_time) as date, 
+	// Get days parameter, default to 7
+	days := 7
+	if daysParam := r.URL.Query().Get("days"); daysParam != "" {
+		if d, err := strconv.Atoi(daysParam); err == nil && d > 0 {
+			days = d
+			if days > 365 {
+				days = 365 // Cap at 1 year
+			}
+		}
+	}
+
+	// Get readings for the specified number of days
+	query := `SELECT DATE(measurement_time) as date, 
 		AVG(systolic) as avg_systolic, 
 		AVG(diastolic) as avg_diastolic,
 		AVG(heart_rate) as avg_heart_rate,
 		COUNT(*) as reading_count
 		FROM blood_pressure_readings 
-		WHERE user_id = ? AND measurement_time >= date('now', '-7 days')
+		WHERE user_id = ? AND measurement_time >= date('now', '-' || ? || ' days')
 		GROUP BY DATE(measurement_time)
-		ORDER BY date DESC`,
-		userID,
-	)
+		ORDER BY date ASC`
+	
+	rows, err := database.DB.Query(query, userID, days)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

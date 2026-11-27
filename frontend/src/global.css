@@ -1,25 +1,52 @@
-/* Global styles */
+/* Global styles - Mobile First Design */
 :root {
   --primary-color: #3b82f6;
   --primary-hover: #2563eb;
+  --primary-light: #dbeafe;
+  --success-color: #10b981;
+  --success-light: #d1fae5;
+  --warning-color: #f59e0b;
+  --warning-light: #fef3c7;
+  --danger-color: #ef4444;
+  --danger-light: #fee2e2;
   --text-color: #1f2937;
   --text-secondary: #6b7280;
+  --text-muted: #9ca3af;
   --card-bg: #ffffff;
-  --nav-bg: #1f2937;
+  --bg-color: #f8fafc;
+  --nav-bg: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%);
   --nav-text: #f3f4f6;
-  --nav-hover: #374151;
+  --nav-hover: rgba(255,255,255,0.1);
   --border-color: #e5e7eb;
-  --table-header-bg: #f9fafb;
-  --table-row-hover: #f3f4f6;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+  --font-xs: 0.75rem;
+  --font-sm: 0.875rem;
+  --font-base: 1rem;
+  --font-lg: 1.125rem;
+  --font-xl: 1.25rem;
+  --font-2xl: 1.5rem;
+  --font-3xl: 2rem;
 }
 
 body.dark {
   --text-color: #f3f4f6;
-  --text-secondary: #9ca3af;
+  --text-secondary: #d1d5db;
+  --text-muted: #9ca3af;
   --card-bg: #1f2937;
+  --bg-color: #111827;
   --border-color: #374151;
-  --table-header-bg: #374151;
-  --table-row-hover: #374151;
+  --nav-bg: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
 }
 
 * {
@@ -28,18 +55,82 @@ body.dark {
   box-sizing: border-box;
 }
 
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-  background: var(--bg-color, #f9fafb);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background: var(--bg-color);
   color: var(--text-color);
   line-height: 1.6;
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-a {
-  color: var(--primary-color);
-  text-decoration: none;
+/* Responsive Typography */
+@media (max-width: 480px) {
+  html { font-size: 14px; }
 }
 
-a:hover {
-  text-decoration: underline;
+@media (min-width: 1200px) {
+  html { font-size: 18px; }
+}
+
+/* TV Screens */
+@media (min-width: 1920px) {
+  html { font-size: 20px; }
+}
+
+@media (min-width: 2560px) {
+  html { font-size: 24px; }
+}
+
+/* Touch-friendly tap targets */
+button, a, input, select, textarea {
+  min-height: 44px;
+  font-size: inherit;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Better focus states for accessibility */
+:focus-visible {
+  outline: 3px solid var(--primary-color);
+  outline-offset: 2px;
+}
+
+/* Hide scrollbar but allow scrolling */
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Utility classes */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+/* Safe area padding for notched devices */
+@supports (padding: max(0px)) {
+  body {
+    padding-left: max(0px, env(safe-area-inset-left));
+    padding-right: max(0px, env(safe-area-inset-right));
+  }
 }

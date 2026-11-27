@@ -1,8 +1,6 @@
 <script lang="ts">
     import { onMount } from 'svelte';
-    import { goto } from '$app/navigation';
     import { currentUser } from '../stores/appStore';
-    import { browser } from '$app/environment';
     import { createEventDispatcher } from 'svelte';
 
     const dispatch = createEventDispatcher();
@@ -13,7 +11,7 @@
     let loading = false;
 
     onMount(() => {
-        if (browser && localStorage.getItem('currentUser')) {
+        if (typeof window !== 'undefined' && localStorage.getItem('currentUser')) {
             dispatch('navigate', 'dashboard');
         }
     });
@@ -33,7 +31,7 @@
             if (response.ok) {
                 const user = await response.json();
                 currentUser.set({ id: user.id, name: user.name, username: user.username });
-                if (browser) {
+                if (typeof window !== 'undefined') {
                     localStorage.setItem('currentUser', JSON.stringify(user));
                 }
                 dispatch('navigate', 'dashboard');
@@ -113,12 +111,16 @@
         margin-top: 1rem;
     }
 
-    .link a {
+    .link button {
         color: var(--primary-color);
-        text-decoration: none;
+        background: none;
+        border: none;
+        padding: 0;
+        font: inherit;
+        cursor: pointer;
     }
 
-    .link a:hover {
+    .link button:hover {
         text-decoration: underline;
     }
 </style>
@@ -153,12 +155,12 @@
             />
         </div>
 
-        <button type="submit" {loading}>
+        <button type="submit" disabled={loading}>
             {#if loading} Logging in... {:else} Login {/if}
         </button>
     </form>
 
     <p class="link">
-        Don't have an account? <a on:click={() => dispatch('navigate', 'register')}>Register</a>
+        Don't have an account? <button type="button" class="link-btn" on:click={() => dispatch('navigate', 'register')}>Register</button>
     </p>
 </div>

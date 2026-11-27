@@ -2,12 +2,27 @@
 .gitignore
 README.md
 LICENSE
+PROJECT_PLAN.md
+PROJECT_SUMMARY.md
+QUICK_START.md
 .dockerignore
 Dockerfile
 docker-compose.yml
 scripts/
+temp/
 *.bat
 *.sh
+
+# Frontend build artifacts (we build fresh in Docker)
 frontend/node_modules
-frontend/package-lock.json
+frontend/dist
 frontend/.vite
+
+# Database (mounted as volume)
+database/*.db
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo

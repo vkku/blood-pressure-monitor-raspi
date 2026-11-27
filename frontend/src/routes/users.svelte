@@ -1,7 +1,6 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import { currentUser } from '../stores/appStore';
-    import { browser } from '$app/environment';
     import { createEventDispatcher } from 'svelte';
 
     const dispatch = createEventDispatcher();
@@ -13,13 +12,12 @@
     }
 
     let users: User[] = [];
-    let selectedUser = '';
     let loading = true;
 
     onMount(async () => {
-        if (!browser) return;
+        if (typeof window === 'undefined') return;
 
-        const user = currentUser;
+        const user = $currentUser;
         if (!user) {
             dispatch('navigate', 'login');
             return;
@@ -38,9 +36,12 @@
     });
 
     function selectUser(userId: number) {
-        currentUser.set(users.find(u => u.id === userId));
-        localStorage.setItem('currentUser', JSON.stringify(users.find(u => u.id === userId)));
-        dispatch('navigate', 'dashboard');
+        const selectedUser = users.find(u => u.id === userId);
+        if (selectedUser) {
+            currentUser.set(selectedUser);
+            localStorage.setItem('currentUser', JSON.stringify(selectedUser));
+            dispatch('navigate', 'dashboard');
+        }
     }
 </script>
 
@@ -51,6 +52,9 @@
     }
 
     .user-card {
+        display: block;
+        width: 100%;
+        text-align: left;
         background: var(--card-bg);
         border-radius: 8px;
         padding: 1.5rem;
@@ -58,6 +62,8 @@
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         cursor: pointer;
         transition: transform 0.2s, box-shadow 0.2s;
+        border: none;
+        font: inherit;
     }
 
     .user-card:hover {
@@ -116,16 +122,17 @@
             </div>
         {:else}
             {#each users as user (user.id)}
-                <div 
-                    class="user-card {$currentUser.id === user.id ? 'current' : ''}"
+                <button 
+                    type="button"
+                    class="user-card {$currentUser?.id === user.id ? 'current' : ''}"
                     on:click={() => selectUser(user.id)}
                 >
                     <h3>{user.name}</h3>
                     <p>@{user.username}</p>
-                    {#if $currentUser.id === user.id}
+                    {#if $currentUser?.id === user.id}
                         <p style="color: var(--primary-color); font-weight: 500;">Currently selected</p>
                     {/if}
-                </div>
+                </button>
             {/each}
         {/if}
 

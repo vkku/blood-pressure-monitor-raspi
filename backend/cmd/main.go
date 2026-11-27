@@ -6,7 +6,9 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/gorilla/mux"
 	"gopkg.in/yaml.v2"
@@ -94,12 +96,26 @@ func main() {
 	r.HandleFunc("/api/users/{user_id}/alerts", handlers.GetAlerts).Methods("GET")
 	r.HandleFunc("/api/users/{user_id}/alerts/{alert_id}/read", handlers.MarkAlertAsRead).Methods("PUT")
 
-	// Serve frontend static files
+	// Health check endpoint
+	r.HandleFunc("/api/health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"status":"ok"}`))
+	}).Methods("GET")
+
+	// Serve frontend static files (SPA with fallback to index.html)
 	frontendPath := os.Getenv("FRONTEND_PATH")
 	if frontendPath == "" {
 		frontendPath = "../frontend"
 	}
-	r.PathPrefix("/").Handler(http.FileServer(http.Dir(frontendPath)))
+	
+	// Check if dist folder exists (production build)
+	distPath := filepath.Join(frontendPath, "dist")
+	if _, err := os.Stat(distPath); err == nil {
+		frontendPath = distPath
+	}
+	
+	log.Printf("Serving frontend from: %s", frontendPath)
+	r.PathPrefix("/").Handler(spaHandler{staticPath: frontendPath, indexPath: "index.html"})
 
 	// Start server on configured port
 	addr := config.Server.Host + ":" + strconv.Itoa(config.Server.Port)
@@ -107,4 +123,44 @@ func main() {
 	if err := http.ListenAndServe(addr, r); err != nil {
 		log.Fatal(err)
 	}
+}
+
+// spaHandler serves static files and falls back to index.html for SPA routing
+type spaHandler struct {
+	staticPath string
+	indexPath  string
+}
+
+func (h spaHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// Get the absolute path to prevent directory traversal
+	path := filepath.Join(h.staticPath, filepath.Clean(r.URL.Path))
+
+	// Check if path is a file that exists
+	fi, err := os.Stat(path)
+	if os.IsNotExist(err) || fi.IsDir() {
+		// File doesn't exist or is directory, serve index.html for SPA routing
+		http.ServeFile(w, r, filepath.Join(h.staticPath, h.indexPath))
+		return
+	}
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Set appropriate content types for common static file extensions
+	ext := strings.ToLower(filepath.Ext(path))
+	switch ext {
+	case ".js":
+		w.Header().Set("Content-Type", "application/javascript")
+	case ".css":
+		w.Header().Set("Content-Type", "text/css")
+	case ".svg":
+		w.Header().Set("Content-Type", "image/svg+xml")
+	case ".json":
+		w.Header().Set("Content-Type", "application/json")
+	}
+
+	// Serve the actual file
+	http.ServeFile(w, r, path)
 }

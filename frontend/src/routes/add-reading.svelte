@@ -1,18 +1,23 @@
 <script lang="ts">
     import ReadingForm from '../components/ReadingForm.svelte';
-    import { goto } from '$app/navigation';
     import { currentUser } from '../stores/appStore';
     import { readings } from '../stores/readingsStore';
-    import { browser } from '$app/environment';
     import { createEventDispatcher } from 'svelte';
 
     const dispatch = createEventDispatcher();
 
     let successMessage = '';
 
-    async function handleFormSubmit(reading: any) {
+    async function handleFormSubmit(event: CustomEvent) {
+        const reading = event.detail;
+        const user = $currentUser;
+        if (!user) {
+            dispatch('navigate', 'login');
+            return;
+        }
+        
         try {
-            const response = await fetch('/api/users/' + currentUser.id + '/readings', {
+            const response = await fetch('/api/users/' + user.id + '/readings', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(reading)

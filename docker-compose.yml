@@ -1,30 +1,27 @@
 version: "3.8"
 
 services:
-  calibre:
-    image: lscr.io/linuxserver/calibre:latest
-    container_name: calibre
-    environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=Etc/UTC
-      - CUSTOM_USER=vkku
-      - PASSWORD=[ENTER_PASSWORD]
-      - TITLE=vkku-home-library
-    volumes:
-      - /home/vkku/calibre-config:/config
-    ports:
-      - 8080:8080
-      - 8081:8081
-      - 8181:8181
-    restart: unless-stopped
-    
   blood-pressure-monitor:
-    build: .
+    image: vkku/blood-pressure-monitor:latest
     container_name: blood-pressure-monitor
     ports:
-      - 8082:8082
+      - "8082:8082"
     volumes:
-      - ./database:/app/database
-      - ./config/config.yaml:/app/config.yaml
+      - bp-data:/app/database
+    environment:
+      - TZ=Asia/Kolkata
+      - CONFIG_PATH=/app/config/config.yaml
+      - DB_PATH=/app/database/blood_pressure.db
+      - DB_DIR=/app/database
+      - FRONTEND_PATH=/app/frontend
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8082/api/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  bp-data:
+    driver: local
