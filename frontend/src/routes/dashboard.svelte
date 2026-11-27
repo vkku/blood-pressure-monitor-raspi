@@ -255,7 +255,7 @@
         <section class="stats-section">
             {#if weeklySummary}
                 {@const bpStatus = getBPStatus(weeklySummary.avg_systolic || 0, weeklySummary.avg_diastolic || 0)}
-                <div class="stat-card hero-card" style="--accent-color: {bpStatus.color}; --accent-bg: {bpStatus.bg}">
+                <button class="stat-card hero-card clickable-card" style="--accent-color: {bpStatus.color}; --accent-bg: {bpStatus.bg}" on:click={() => dispatch('navigate', 'readings')}>
                     <div class="stat-icon">🩺</div>
                     <div class="stat-content">
                         <div class="stat-value">
@@ -266,7 +266,7 @@
                         <div class="stat-label">Average BP (mmHg)</div>
                         <div class="stat-status-row">
                             <div class="stat-status" style="color: {bpStatus.color}; background: {bpStatus.bg}">{bpStatus.status}</div>
-                            <button class="info-btn" on:click={() => showBPInfo = true} aria-label="Blood pressure categories info">
+                            <button class="info-btn" on:click|stopPropagation={() => showBPInfo = true} aria-label="Blood pressure categories info">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <circle cx="12" cy="12" r="10"/>
                                     <line x1="12" y1="16" x2="12" y2="12"/>
@@ -275,27 +275,27 @@
                             </button>
                         </div>
                     </div>
-                </div>
+                </button>
 
-                <div class="stat-card">
+                <button class="stat-card clickable-card" on:click={() => dispatch('navigate', 'readings')}>
                     <div class="stat-icon">❤️</div>
                     <div class="stat-content">
                         <div class="stat-value">{Math.round(weeklySummary.avg_heart_rate || 0)}</div>
                         <div class="stat-label">Avg Heart Rate</div>
                         <div class="stat-unit">bpm</div>
                     </div>
-                </div>
+                </button>
 
-                <div class="stat-card">
+                <button class="stat-card clickable-card" on:click={() => dispatch('navigate', 'readings')}>
                     <div class="stat-icon">📊</div>
                     <div class="stat-content">
                         <div class="stat-value">{weeklySummary.total_readings || 0}</div>
                         <div class="stat-label">Readings</div>
                         <div class="stat-unit">{selectedPeriod === 'week' ? 'this week' : selectedPeriod === 'month' ? 'this month' : 'this year'}</div>
                     </div>
-                </div>
+                </button>
 
-                <div class="stat-card">
+                <button class="stat-card clickable-card" on:click={() => dispatch('navigate', 'readings')}>
                     <div class="stat-icon">📈</div>
                     <div class="stat-content">
                         <div class="stat-value range-value">
@@ -304,7 +304,7 @@
                         <div class="stat-label">Systolic Range</div>
                         <div class="stat-unit">mmHg</div>
                     </div>
-                </div>
+                </button>
             {:else}
                 <div class="empty-stats">
                     <div class="empty-icon">📊</div>
@@ -579,6 +579,17 @@
     .stat-card:hover {
         transform: translateY(-2px);
         box-shadow: var(--shadow-lg);
+    }
+
+    .stat-card.clickable-card {
+        cursor: pointer;
+        border: none;
+        text-align: center;
+        width: 100%;
+    }
+
+    .stat-card.clickable-card:active {
+        transform: scale(0.98);
     }
 
     .stat-card.hero-card {

@@ -77,10 +77,37 @@
         padding: 1.5rem;
         margin-bottom: 1rem;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        width: 100%;
+        text-align: left;
+        border: none;
+        cursor: pointer;
+        transition: transform 0.2s, box-shadow 0.2s;
+        font: inherit;
+    }
+
+    .alert-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    .alert-card:active {
+        transform: scale(0.99);
     }
 
     .alert-card.unread {
         border-left: 4px solid var(--primary-color);
+    }
+
+    .alert-action {
+        text-align: right;
+        margin-top: 0.75rem;
+        margin-bottom: 0;
+    }
+
+    .view-reading-link {
+        color: var(--primary-color);
+        font-size: 0.875rem;
+        font-weight: 500;
     }
 
     .alert-header {
@@ -175,9 +202,10 @@
         </div>
     {:else}
         {#each alertsList as alert (alert.id)}
-            <div 
+            <button 
                 class="alert-card {alert.is_read ? '' : 'unread'}"
                 style="background: {getAlertColor(alert.severity)}; border-left-color: {getAlertColor(alert.severity)}"
+                on:click={() => { markAsRead(alert.id); dispatch('navigate', 'readings'); }}
             >
                 <div class="alert-header">
                     <div>
@@ -186,15 +214,20 @@
                             {alert.alert_type.replace('_', ' ').toUpperCase()}
                         </span>
                     </div>
-                    <div class="alert-time">{alert.created_at.split('T')[0]}</div>
+                    <div class="alert-time">
+                        {new Date(alert.created_at).toLocaleDateString('en-US', { 
+                            month: 'short', 
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        })}
+                    </div>
                 </div>
                 <p class="alert-message">{alert.message}</p>
-                {#if !alert.is_read}
-                    <p style="text-align: right; margin-top: 0.5rem;">
-                        <button type="button" class="mark-read-btn" on:click={() => markAsRead(alert.id)}>✓ Mark as read</button>
-                    </p>
-                {/if}
-            </div>
+                <p class="alert-action">
+                    <span class="view-reading-link">View readings →</span>
+                </p>
+            </button>
         {/each}
     {/if}
 </div>
