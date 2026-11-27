@@ -25,6 +25,11 @@
     $: chartData = chartResult.data;
     $: chartMetadata = chartResult.metadata;
     $: chartRawData = chartResult.rawData;
+    
+    // Recalculate summary when period changes
+    $: if (trends.length > 0 && selectedPeriod) {
+        weeklySummary = calculateSummaryFromTrends();
+    }
 
     function getChartData(trends: DailyTrend[], period: string) {
         if (!trends || !Array.isArray(trends) || trends.length === 0) {
@@ -123,12 +128,21 @@
             if (trendsResponse.ok) {
                 const data = await trendsResponse.json();
                 trends = Array.isArray(data) ? data : [];
+                
+                // Auto-select best period based on data availability
+                autoSelectPeriod();
             }
 
-            // Fetch weekly summary
+            // Fetch weekly summary first, fall back to monthly if empty
             const summaryResponse = await fetch(`/api/users/${userId}/readings/weekly-summary`);
             if (summaryResponse.ok) {
-                weeklySummary = await summaryResponse.json();
+                const summary = await summaryResponse.json();
+                // If weekly has no readings, calculate from all readings
+                if (!summary.total_readings || summary.total_readings === 0) {
+                    weeklySummary = calculateSummaryFromTrends();
+                } else {
+                    weeklySummary = summary;
+                }
             }
 
             // Fetch recent readings
@@ -142,6 +156,63 @@
         } finally {
             loading = false;
         }
+    }
+
+    function autoSelectPeriod() {
+        if (!trends || trends.length === 0) return;
+        
+        const now = new Date();
+        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        
+        const weekData = trends.filter(t => new Date(t.date) >= weekAgo);
+        const monthData = trends.filter(t => new Date(t.date) >= monthAgo);
+        
+        if (weekData.length > 0) {
+            selectedPeriod = 'week';
+        } else if (monthData.length > 0) {
+            selectedPeriod = 'month';
+        } else {
+            selectedPeriod = 'year';
+        }
+    }
+
+    function calculateSummaryFromTrends(): any {
+        if (!trends || trends.length === 0) {
+            return { total_readings: 0, avg_systolic: 0, avg_diastolic: 0, avg_heart_rate: 0 };
+        }
+        
+        // Use data from selected period for summary
+        const now = new Date();
+        let filteredTrends = trends;
+        
+        if (selectedPeriod === 'week') {
+            const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            filteredTrends = trends.filter(t => new Date(t.date) >= weekAgo);
+        } else if (selectedPeriod === 'month') {
+            const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+            filteredTrends = trends.filter(t => new Date(t.date) >= monthAgo);
+        }
+        
+        if (filteredTrends.length === 0) filteredTrends = trends;
+        
+        const totalReadings = filteredTrends.reduce((sum, t) => sum + t.reading_count, 0);
+        const avgSystolic = filteredTrends.reduce((sum, t) => sum + t.avg_systolic * t.reading_count, 0) / totalReadings;
+        const avgDiastolic = filteredTrends.reduce((sum, t) => sum + t.avg_diastolic * t.reading_count, 0) / totalReadings;
+        const avgHeartRate = filteredTrends.reduce((sum, t) => sum + t.avg_heart_rate * t.reading_count, 0) / totalReadings;
+        
+        const systolicValues = filteredTrends.map(t => t.avg_systolic);
+        const minSystolic = Math.min(...systolicValues);
+        const maxSystolic = Math.max(...systolicValues);
+        
+        return {
+            total_readings: totalReadings,
+            avg_systolic: avgSystolic,
+            avg_diastolic: avgDiastolic,
+            avg_heart_rate: avgHeartRate,
+            min_systolic: minSystolic,
+            max_systolic: maxSystolic
+        };
     }
 
     onMount(async () => {
@@ -220,7 +291,7 @@
                     <div class="stat-content">
                         <div class="stat-value">{weeklySummary.total_readings || 0}</div>
                         <div class="stat-label">Readings</div>
-                        <div class="stat-unit">this week</div>
+                        <div class="stat-unit">{selectedPeriod === 'week' ? 'this week' : selectedPeriod === 'month' ? 'this month' : 'this year'}</div>
                     </div>
                 </div>
 
