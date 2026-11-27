@@ -1,6 +1,7 @@
 <script lang="ts">
-    import { createEventDispatcher } from 'svelte';
+    import { createEventDispatcher, onMount } from 'svelte';
     import { currentUser } from '../stores/appStore';
+    import { createWorker } from 'tesseract.js';
 
     const dispatch = createEventDispatcher();
 
@@ -19,6 +20,240 @@
     let systolicInput: HTMLInputElement;
     let diastolicInput: HTMLInputElement;
     let heartRateInput: HTMLInputElement;
+
+    // Camera/OCR state
+    let fileInput: HTMLInputElement;
+    let isProcessingImage = false;
+    let ocrProgress = 0;
+    let ocrStatus = '';
+    let capturedImage: string | null = null;
+    let showImagePreview = false;
+
+    // Trigger camera/file picker
+    function openCamera() {
+        fileInput?.click();
+    }
+
+    // Handle image selection
+    async function handleImageCapture(e: Event) {
+        const target = e.target as HTMLInputElement;
+        const file = target.files?.[0];
+        if (!file) return;
+
+        // Show preview
+        capturedImage = URL.createObjectURL(file);
+        showImagePreview = true;
+
+        // Process with OCR
+        await processImageWithOCR(file);
+    }
+
+    // Process image with Tesseract OCR
+    async function processImageWithOCR(file: File) {
+        isProcessingImage = true;
+        ocrProgress = 0;
+        ocrStatus = 'Initializing OCR...';
+
+        try {
+            const worker = await createWorker('eng', 1, {
+                logger: (m) => {
+                    if (m.status === 'recognizing text') {
+                        ocrProgress = Math.round(m.progress * 100);
+                        ocrStatus = `Reading image... ${ocrProgress}%`;
+                    }
+                }
+            });
+
+            ocrStatus = 'Processing image...';
+            
+            // Create image for processing - handle orientation
+            const processedImage = await preprocessImage(file);
+            
+            const { data: { text } } = await worker.recognize(processedImage);
+            
+            console.log('OCR Raw text:', text);
+            
+            // Extract BP values from OCR text
+            extractBPValues(text);
+            
+            await worker.terminate();
+            ocrStatus = 'Complete!';
+            
+            // Hide preview after success
+            setTimeout(() => {
+                showImagePreview = false;
+                capturedImage = null;
+            }, 1500);
+
+        } catch (error) {
+            console.error('OCR Error:', error);
+            ocrStatus = 'Failed to read image. Try again.';
+        } finally {
+            isProcessingImage = false;
+            // Reset file input for re-capture
+            if (fileInput) fileInput.value = '';
+        }
+    }
+
+    // Preprocess image - handle orientation and enhance for OCR
+    async function preprocessImage(file: File): Promise<string> {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                if (!ctx) {
+                    reject(new Error('Canvas context not available'));
+                    return;
+                }
+
+                // Set canvas size
+                let width = img.width;
+                let height = img.height;
+                
+                // Scale down large images for faster processing
+                const maxDim = 1200;
+                if (width > maxDim || height > maxDim) {
+                    const scale = maxDim / Math.max(width, height);
+                    width *= scale;
+                    height *= scale;
+                }
+                
+                canvas.width = width;
+                canvas.height = height;
+
+                // Draw image
+                ctx.drawImage(img, 0, 0, width, height);
+
+                // Enhance contrast for LCD display reading
+                const imageData = ctx.getImageData(0, 0, width, height);
+                const data = imageData.data;
+                
+                // Convert to grayscale and increase contrast
+                for (let i = 0; i < data.length; i += 4) {
+                    // Grayscale
+                    const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+                    // Increase contrast
+                    const contrast = 1.5;
+                    const factor = (259 * (contrast * 128 + 255)) / (255 * (259 - contrast * 128));
+                    const newGray = Math.min(255, Math.max(0, factor * (gray - 128) + 128));
+                    
+                    data[i] = newGray;
+                    data[i + 1] = newGray;
+                    data[i + 2] = newGray;
+                }
+                
+                ctx.putImageData(imageData, 0, 0);
+                
+                resolve(canvas.toDataURL('image/png'));
+            };
+            img.onerror = reject;
+            img.src = URL.createObjectURL(file);
+        });
+    }
+
+    // Extract BP values from OCR text
+    function extractBPValues(text: string) {
+        // Clean up text - remove extra spaces, normalize
+        const cleanText = text.replace(/\s+/g, ' ').toUpperCase();
+        console.log('Clean OCR text:', cleanText);
+
+        // Common patterns for BP monitor displays
+        // Pattern: Look for 3-digit number (systolic), 2-3 digit (diastolic), 2-3 digit (pulse)
+        
+        // Try to find SYS value
+        let sysMatch = cleanText.match(/SYS[^\d]*(\d{2,3})/i);
+        if (!sysMatch) {
+            // Try finding standalone 3-digit numbers in typical systolic range
+            sysMatch = cleanText.match(/\b(1[0-2]\d|1[3-9]\d|[89]\d)\b/);
+        }
+        
+        // Try to find DIA value
+        let diaMatch = cleanText.match(/DIA[^\d]*(\d{2,3})/i);
+        if (!diaMatch) {
+            // Look for 2-3 digit numbers in diastolic range after systolic
+            const numbers = cleanText.match(/\b(\d{2,3})\b/g);
+            if (numbers && numbers.length >= 2) {
+                // Second number is likely diastolic
+                const potentialDia = parseInt(numbers[1]);
+                if (potentialDia >= 40 && potentialDia <= 150) {
+                    diaMatch = [numbers[1], numbers[1]];
+                }
+            }
+        }
+        
+        // Try to find PULSE value
+        let pulseMatch = cleanText.match(/PULSE[^\d]*(\d{2,3})/i);
+        if (!pulseMatch) {
+            pulseMatch = cleanText.match(/PUL[^\d]*(\d{2,3})/i);
+        }
+        if (!pulseMatch) {
+            // Look for third number in heart rate range
+            const numbers = cleanText.match(/\b(\d{2,3})\b/g);
+            if (numbers && numbers.length >= 3) {
+                const potentialPulse = parseInt(numbers[2]);
+                if (potentialPulse >= 40 && potentialPulse <= 200) {
+                    pulseMatch = [numbers[2], numbers[2]];
+                }
+            }
+        }
+
+        // Also try pattern matching for LCD-style digits
+        // LCD displays often show numbers stacked: SYS on top, DIA middle, PULSE bottom
+        const allNumbers = cleanText.match(/\b(\d{2,3})\b/g);
+        console.log('All numbers found:', allNumbers);
+
+        if (allNumbers && allNumbers.length >= 3) {
+            // Sort by value to identify: highest=systolic, middle=diastolic, lowest=pulse usually
+            const nums = allNumbers.map(n => parseInt(n)).filter(n => n > 30 && n < 300);
+            nums.sort((a, b) => b - a);
+            
+            if (nums.length >= 3) {
+                // Likely pattern: systolic (highest), diastolic, pulse
+                const potentialSys = nums.find(n => n >= 70 && n <= 250);
+                const potentialDia = nums.find(n => n >= 40 && n <= 150 && n !== potentialSys);
+                const potentialPulse = nums.find(n => n >= 40 && n <= 200 && n !== potentialSys && n !== potentialDia);
+                
+                if (!sysMatch && potentialSys) {
+                    systolic = String(potentialSys);
+                }
+                if (!diaMatch && potentialDia) {
+                    diastolic = String(potentialDia);
+                }
+                if (!pulseMatch && potentialPulse) {
+                    heartRate = String(potentialPulse);
+                }
+            }
+        }
+
+        // Apply matched values
+        if (sysMatch) {
+            const val = parseInt(sysMatch[1]);
+            if (val >= 70 && val <= 250) {
+                systolic = String(val);
+            }
+        }
+        if (diaMatch) {
+            const val = parseInt(diaMatch[1]);
+            if (val >= 40 && val <= 150) {
+                diastolic = String(val);
+            }
+        }
+        if (pulseMatch) {
+            const val = parseInt(pulseMatch[1]);
+            if (val >= 40 && val <= 200) {
+                heartRate = String(val);
+            }
+        }
+
+        console.log('Extracted values:', { systolic, diastolic, heartRate });
+    }
+
+    function closePreview() {
+        showImagePreview = false;
+        capturedImage = null;
+        isProcessingImage = false;
+    }
 
     // Auto-advance to next field on valid input
     function handleSystolicInput(e: Event) {
@@ -105,6 +340,56 @@
 </script>
 
 <div class="reading-form">
+    <!-- Hidden file input for camera -->
+    <input 
+        type="file" 
+        accept="image/*" 
+        capture="environment"
+        bind:this={fileInput}
+        on:change={handleImageCapture}
+        style="display: none;"
+    />
+
+    <!-- Camera Capture Button -->
+    <button type="button" class="camera-btn" on:click={openCamera} disabled={isProcessingImage}>
+        {#if isProcessingImage}
+            <span class="camera-icon spinning">⏳</span>
+            <span>{ocrStatus}</span>
+        {:else}
+            <span class="camera-icon">📷</span>
+            <span>Scan BP Monitor</span>
+        {/if}
+    </button>
+
+    {#if isProcessingImage}
+        <div class="ocr-progress">
+            <div class="progress-bar">
+                <div class="progress-fill" style="width: {ocrProgress}%"></div>
+            </div>
+            <span class="progress-text">{ocrStatus}</span>
+        </div>
+    {/if}
+
+    <!-- Image Preview Modal -->
+    {#if showImagePreview && capturedImage}
+        <div class="image-preview-overlay" on:click={closePreview} on:keydown={(e) => e.key === 'Escape' && closePreview()} role="dialog" aria-modal="true">
+            <div class="image-preview-content" on:click|stopPropagation role="document">
+                <button class="close-preview-btn" on:click={closePreview}>✕</button>
+                <img src={capturedImage} alt="Captured BP Monitor" class="preview-image" />
+                {#if isProcessingImage}
+                    <div class="preview-status">
+                        <span class="spinner"></span>
+                        {ocrStatus}
+                    </div>
+                {:else}
+                    <div class="preview-status success">
+                        ✓ Values extracted!
+                    </div>
+                {/if}
+            </div>
+        </div>
+    {/if}
+
     <form on:submit={handleSubmit}>
         <!-- Main Input Card - BP values entered directly here -->
         <div class="bp-input-card" style="border-color: {bpStatus.color}">
@@ -265,6 +550,151 @@
     .reading-form {
         max-width: 500px;
         margin: 0 auto;
+    }
+
+    /* Camera Button */
+    .camera-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: var(--spacing-sm);
+        width: 100%;
+        padding: var(--spacing-md) var(--spacing-lg);
+        background: linear-gradient(135deg, #3b82f6, #2563eb);
+        color: white;
+        border: none;
+        border-radius: var(--radius-lg);
+        font-size: var(--font-base);
+        font-weight: 600;
+        cursor: pointer;
+        margin-bottom: var(--spacing-md);
+        transition: all 0.2s;
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    }
+
+    .camera-btn:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+    }
+
+    .camera-btn:active:not(:disabled) {
+        transform: translateY(0);
+    }
+
+    .camera-btn:disabled {
+        opacity: 0.7;
+        cursor: wait;
+    }
+
+    .camera-icon {
+        font-size: 1.25rem;
+    }
+
+    .camera-icon.spinning {
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+
+    /* OCR Progress */
+    .ocr-progress {
+        margin-bottom: var(--spacing-md);
+        padding: var(--spacing-sm);
+        background: var(--card-bg);
+        border-radius: var(--radius-md);
+    }
+
+    .progress-bar {
+        height: 6px;
+        background: var(--border-color);
+        border-radius: 3px;
+        overflow: hidden;
+        margin-bottom: var(--spacing-xs);
+    }
+
+    .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #3b82f6, #10b981);
+        border-radius: 3px;
+        transition: width 0.3s;
+    }
+
+    .progress-text {
+        font-size: var(--font-sm);
+        color: var(--text-muted);
+        text-align: center;
+        display: block;
+    }
+
+    /* Image Preview Overlay */
+    .image-preview-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.85);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        padding: var(--spacing-md);
+    }
+
+    .image-preview-content {
+        position: relative;
+        max-width: 90vw;
+        max-height: 80vh;
+        background: var(--card-bg);
+        border-radius: var(--radius-xl);
+        overflow: hidden;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    }
+
+    .close-preview-btn {
+        position: absolute;
+        top: var(--spacing-sm);
+        right: var(--spacing-sm);
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: rgba(0, 0, 0, 0.5);
+        color: white;
+        border: none;
+        font-size: 1.25rem;
+        cursor: pointer;
+        z-index: 10;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .close-preview-btn:hover {
+        background: rgba(0, 0, 0, 0.7);
+    }
+
+    .preview-image {
+        max-width: 100%;
+        max-height: 60vh;
+        display: block;
+    }
+
+    .preview-status {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: var(--spacing-sm);
+        padding: var(--spacing-md);
+        background: var(--bg-color);
+        font-weight: 500;
+    }
+
+    .preview-status.success {
+        color: #10b981;
+        background: #d1fae5;
     }
 
     /* Main BP Input Card - Direct inline inputs */
