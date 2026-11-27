@@ -20,16 +20,30 @@
     let diastolicInput: HTMLInputElement;
     let heartRateInput: HTMLInputElement;
 
-    function focusSystolic() {
-        systolicInput?.focus();
+    // Auto-advance to next field on valid input
+    function handleSystolicInput(e: Event) {
+        const target = e.target as HTMLInputElement;
+        const val = target.value;
+        // Auto-advance to diastolic when 3 digits entered or value >= 100
+        if (val.length >= 3 || (val.length === 2 && parseInt(val) >= 10)) {
+            setTimeout(() => diastolicInput?.focus(), 50);
+        }
     }
 
-    function focusDiastolic() {
-        diastolicInput?.focus();
+    function handleDiastolicInput(e: Event) {
+        const target = e.target as HTMLInputElement;
+        const val = target.value;
+        // Auto-advance to heart rate when 2-3 digits entered
+        if (val.length >= 2 && parseInt(val) >= 10) {
+            setTimeout(() => heartRateInput?.focus(), 50);
+        }
     }
 
-    function focusHeartRate() {
-        heartRateInput?.focus();
+    function handleKeyDown(e: KeyboardEvent, nextInput?: HTMLInputElement) {
+        if (e.key === 'Enter' || e.key === 'Tab') {
+            e.preventDefault();
+            nextInput?.focus();
+        }
     }
 
     function handleSubmit(e: Event) {
@@ -91,90 +105,74 @@
 </script>
 
 <div class="reading-form">
-    <!-- Live BP Preview - Clickable to focus inputs -->
-    <div class="bp-preview" style="border-color: {bpStatus.color}">
-        <div class="bp-values">
-            <button type="button" class="bp-main bp-clickable" on:click={focusSystolic} aria-label="Click to enter systolic">
-                <span class="systolic" style="color: {systolic && parseInt(systolic) >= 140 ? '#ef4444' : 'var(--text-color)'}">{systolic || '---'}</span>
-                <span class="separator">/</span>
-                <span class="diastolic" on:click|stopPropagation={focusDiastolic} style="color: {diastolic && parseInt(diastolic) >= 90 ? '#ef4444' : 'var(--text-color)'}">{diastolic || '---'}</span>
-            </button>
-            <div class="bp-unit">mmHg</div>
-        </div>
-        <div class="bp-status" style="color: {bpStatus.color}; background: {bpStatus.bg}">
-            {bpStatus.status}
-        </div>
-        <button type="button" class="hr-preview hr-clickable" on:click={focusHeartRate} aria-label="Click to enter heart rate">
-            <span class="hr-icon">❤️</span>
-            <span class="hr-value">{heartRate || '--'}</span>
-            <span class="hr-unit">bpm</span>
-        </button>
-    </div>
-
     <form on:submit={handleSubmit}>
-        <!-- Main Inputs - Large Touch Targets -->
-        <div class="main-inputs">
-            <div class="input-group">
-                <label for="systolic">Systolic</label>
-                <div class="number-input">
-                    <button type="button" class="increment-btn" on:click={() => systolic = String(Math.max(50, (parseInt(systolic) || 120) - 1))} disabled={isSubmitting}>−</button>
+        <!-- Main Input Card - BP values entered directly here -->
+        <div class="bp-input-card" style="border-color: {bpStatus.color}">
+            <div class="bp-input-row">
+                <div class="bp-field">
                     <input
-                        type="number"
-                        id="systolic"
+                        type="text"
+                        inputmode="numeric"
+                        pattern="[0-9]*"
                         bind:this={systolicInput}
                         bind:value={systolic}
-                        placeholder="120"
-                        min="50"
-                        max="250"
-                        inputmode="numeric"
-                        required
+                        placeholder="---"
+                        maxlength="3"
+                        class="bp-inline-input systolic-input"
+                        class:has-value={systolic}
+                        class:high={systolic && parseInt(systolic) >= 140}
+                        on:input={handleSystolicInput}
+                        on:keydown={(e) => handleKeyDown(e, diastolicInput)}
                         disabled={isSubmitting}
+                        aria-label="Systolic pressure"
                     />
-                    <button type="button" class="increment-btn" on:click={() => systolic = String(Math.min(250, (parseInt(systolic) || 120) + 1))} disabled={isSubmitting}>+</button>
+                    <span class="field-label">SYS</span>
                 </div>
-                <span class="input-hint">Top number</span>
-            </div>
-
-            <div class="input-group">
-                <label for="diastolic">Diastolic</label>
-                <div class="number-input">
-                    <button type="button" class="increment-btn" on:click={() => diastolic = String(Math.max(30, (parseInt(diastolic) || 80) - 1))} disabled={isSubmitting}>−</button>
+                <span class="bp-separator">/</span>
+                <div class="bp-field">
                     <input
-                        type="number"
-                        id="diastolic"
+                        type="text"
+                        inputmode="numeric"
+                        pattern="[0-9]*"
                         bind:this={diastolicInput}
                         bind:value={diastolic}
-                        placeholder="80"
-                        min="30"
-                        max="150"
-                        inputmode="numeric"
-                        required
+                        placeholder="--"
+                        maxlength="3"
+                        class="bp-inline-input diastolic-input"
+                        class:has-value={diastolic}
+                        class:high={diastolic && parseInt(diastolic) >= 90}
+                        on:input={handleDiastolicInput}
+                        on:keydown={(e) => handleKeyDown(e, heartRateInput)}
                         disabled={isSubmitting}
+                        aria-label="Diastolic pressure"
                     />
-                    <button type="button" class="increment-btn" on:click={() => diastolic = String(Math.min(150, (parseInt(diastolic) || 80) + 1))} disabled={isSubmitting}>+</button>
+                    <span class="field-label">DIA</span>
                 </div>
-                <span class="input-hint">Bottom number</span>
+                <span class="bp-unit-label">mmHg</span>
+            </div>
+            
+            <div class="bp-status-badge" style="color: {bpStatus.color}; background: {bpStatus.bg}">
+                {bpStatus.status}
             </div>
 
-            <div class="input-group">
-                <label for="heartRate">Heart Rate</label>
-                <div class="number-input">
-                    <button type="button" class="increment-btn" on:click={() => heartRate = String(Math.max(30, (parseInt(heartRate) || 72) - 1))} disabled={isSubmitting}>−</button>
+            <div class="hr-input-row">
+                <span class="hr-icon-anim">❤️</span>
+                <div class="hr-field">
                     <input
-                        type="number"
-                        id="heartRate"
+                        type="text"
+                        inputmode="numeric"
+                        pattern="[0-9]*"
                         bind:this={heartRateInput}
                         bind:value={heartRate}
-                        placeholder="72"
-                        min="30"
-                        max="220"
-                        inputmode="numeric"
-                        required
+                        placeholder="--"
+                        maxlength="3"
+                        class="hr-inline-input"
+                        class:has-value={heartRate}
                         disabled={isSubmitting}
+                        aria-label="Heart rate"
                     />
-                    <button type="button" class="increment-btn" on:click={() => heartRate = String(Math.min(220, (parseInt(heartRate) || 72) + 1))} disabled={isSubmitting}>+</button>
+                    <span class="field-label">BPM</span>
                 </div>
-                <span class="input-hint">Pulse (bpm)</span>
             </div>
         </div>
 
@@ -269,183 +267,165 @@
         margin: 0 auto;
     }
 
-    /* BP Preview Card */
-    .bp-preview {
+    /* Main BP Input Card - Direct inline inputs */
+    .bp-input-card {
         background: var(--card-bg);
         border-radius: var(--radius-xl);
-        padding: var(--spacing-lg);
+        padding: var(--spacing-xl);
         margin-bottom: var(--spacing-lg);
         box-shadow: var(--shadow-lg);
         text-align: center;
-        border: 3px solid var(--border-color);
-        transition: border-color 0.3s;
+        border: 3px dashed var(--border-color);
+        transition: border-color 0.3s, border-style 0.3s;
     }
 
-    .bp-values {
+    .bp-input-card:focus-within {
+        border-style: solid;
+        box-shadow: var(--shadow-xl), 0 0 0 4px var(--primary-light);
+    }
+
+    .bp-input-row {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: var(--spacing-xs);
         margin-bottom: var(--spacing-sm);
     }
 
-    .bp-main {
+    .bp-field {
         display: flex;
-        justify-content: center;
-        align-items: baseline;
+        flex-direction: column;
+        align-items: center;
     }
 
-    /* Clickable BP preview elements */
-    .bp-clickable,
-    .hr-clickable {
-        background: none;
-        border: none;
-        cursor: pointer;
-        padding: var(--spacing-xs);
-        border-radius: var(--radius-md);
-        transition: background-color 0.2s;
-    }
-
-    .bp-clickable:hover,
-    .hr-clickable:hover {
-        background: var(--primary-light);
-    }
-
-    .bp-clickable:active,
-    .hr-clickable:active {
-        transform: scale(0.98);
-    }
-
-    .bp-main .systolic,
-    .bp-main .diastolic {
-        font-size: clamp(2.5rem, 10vw, 4rem);
+    .bp-inline-input {
+        width: 100px;
+        font-size: clamp(2.5rem, 12vw, 4rem);
         font-weight: 700;
-        transition: color 0.3s;
+        text-align: center;
+        background: transparent;
+        border: none;
+        border-bottom: 3px dashed var(--border-color);
+        color: var(--text-color);
+        padding: var(--spacing-xs) 0;
+        transition: all 0.2s;
+        caret-color: var(--primary-color);
     }
 
-    .bp-main .separator {
+    .bp-inline-input:focus {
+        outline: none;
+        border-bottom: 3px solid var(--primary-color);
+        background: var(--primary-light);
+        border-radius: var(--radius-md) var(--radius-md) 0 0;
+    }
+
+    .bp-inline-input::placeholder {
+        color: var(--text-muted);
+        opacity: 0.5;
+    }
+
+    .bp-inline-input.has-value {
+        border-bottom-style: solid;
+    }
+
+    .bp-inline-input.high {
+        color: #ef4444;
+    }
+
+    .systolic-input {
+        width: 110px;
+    }
+
+    .diastolic-input {
+        width: 90px;
+    }
+
+    .bp-separator {
         font-size: clamp(2rem, 8vw, 3rem);
         color: var(--text-muted);
+        font-weight: 300;
         margin: 0 var(--spacing-xs);
     }
 
-    .bp-unit {
+    .bp-unit-label {
         font-size: var(--font-sm);
         color: var(--text-muted);
+        align-self: flex-end;
+        margin-bottom: var(--spacing-md);
+        margin-left: var(--spacing-xs);
     }
 
-    .bp-status {
+    .field-label {
+        font-size: var(--font-xs);
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-top: var(--spacing-xs);
+    }
+
+    .bp-status-badge {
         display: inline-block;
         padding: var(--spacing-sm) var(--spacing-lg);
         border-radius: var(--radius-xl);
         font-weight: 600;
         font-size: var(--font-base);
-        margin: var(--spacing-sm) 0;
+        margin: var(--spacing-md) 0;
     }
 
-    .hr-preview {
+    .hr-input-row {
         display: flex;
         justify-content: center;
         align-items: center;
-        gap: var(--spacing-sm);
+        gap: var(--spacing-md);
         padding-top: var(--spacing-md);
         border-top: 1px solid var(--border-color);
         margin-top: var(--spacing-md);
     }
 
-    .hr-icon {
-        font-size: 1.25rem;
+    .hr-icon-anim {
+        font-size: 1.5rem;
         animation: heartbeat 1s ease-in-out infinite;
     }
 
     @keyframes heartbeat {
         0%, 100% { transform: scale(1); }
-        50% { transform: scale(1.1); }
+        50% { transform: scale(1.15); }
     }
 
-    .hr-value {
-        font-size: var(--font-2xl);
-        font-weight: 600;
-    }
-
-    .hr-unit {
-        font-size: var(--font-sm);
-        color: var(--text-muted);
-    }
-
-    /* Main Number Inputs */
-    .main-inputs {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: var(--spacing-sm);
-        margin-bottom: var(--spacing-lg);
-    }
-
-    .input-group {
-        text-align: center;
-    }
-
-    .input-group label {
-        display: block;
-        font-size: var(--font-sm);
-        font-weight: 600;
-        color: var(--text-color);
-        margin-bottom: var(--spacing-xs);
-    }
-
-    .number-input {
+    .hr-field {
         display: flex;
+        flex-direction: column;
         align-items: center;
-        background: var(--card-bg);
-        border: 2px solid var(--border-color);
-        border-radius: var(--radius-lg);
-        overflow: hidden;
     }
 
-    .number-input input {
-        flex: 1;
-        width: 100%;
-        min-width: 0;
-        padding: var(--spacing-md);
-        border: none;
-        background: transparent;
-        text-align: center;
-        font-size: var(--font-xl);
+    .hr-inline-input {
+        width: 80px;
+        font-size: var(--font-3xl);
         font-weight: 600;
-        color: var(--text-color);
-    }
-
-    .number-input input:focus {
-        outline: none;
-    }
-
-    .number-input input::placeholder {
-        color: var(--text-muted);
-    }
-
-    .increment-btn {
-        padding: var(--spacing-md);
-        background: var(--bg-color);
+        text-align: center;
+        background: transparent;
         border: none;
+        border-bottom: 2px dashed var(--border-color);
         color: var(--text-color);
-        font-size: var(--font-xl);
-        font-weight: 300;
-        cursor: pointer;
-        transition: background 0.2s;
-        min-width: 44px;
+        padding: var(--spacing-xs) 0;
+        transition: all 0.2s;
+        caret-color: var(--primary-color);
     }
 
-    .increment-btn:hover {
+    .hr-inline-input:focus {
+        outline: none;
+        border-bottom: 2px solid var(--primary-color);
         background: var(--primary-light);
-        color: var(--primary-color);
+        border-radius: var(--radius-md) var(--radius-md) 0 0;
     }
 
-    .increment-btn:active {
-        background: var(--primary-color);
-        color: white;
-    }
-
-    .input-hint {
-        display: block;
-        font-size: var(--font-xs);
+    .hr-inline-input::placeholder {
         color: var(--text-muted);
-        margin-top: var(--spacing-xs);
+        opacity: 0.5;
+    }
+
+    .hr-inline-input.has-value {
+        border-bottom-style: solid;
     }
 
     /* Quick Options */
