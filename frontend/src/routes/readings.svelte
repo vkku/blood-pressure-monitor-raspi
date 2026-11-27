@@ -11,13 +11,17 @@
     let viewMode: 'cards' | 'table' = 'cards';
 
     function getBPStatus(systolic: number, diastolic: number): { status: string; color: string; bg: string } {
+        // AHA Blood Pressure Categories
         if (systolic >= 180 || diastolic >= 120) {
             return { status: 'Crisis', color: '#991b1b', bg: '#fee2e2' };
         }
         if (systolic >= 140 || diastolic >= 90) {
-            return { status: 'High', color: '#dc2626', bg: '#fecaca' };
+            return { status: 'High Stage 2', color: '#dc2626', bg: '#fecaca' };
         }
         if (systolic >= 130 || diastolic >= 80) {
+            return { status: 'High Stage 1', color: '#ea580c', bg: '#ffedd5' };
+        }
+        if (systolic >= 120 && diastolic < 80) {
             return { status: 'Elevated', color: '#d97706', bg: '#fef3c7' };
         }
         if (systolic >= 90 && diastolic >= 60) {

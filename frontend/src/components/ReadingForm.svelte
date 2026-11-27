@@ -58,9 +58,11 @@
         if (!sys || !dia) return { status: 'Enter values', color: 'var(--text-muted)', bg: 'var(--bg-color)' };
         const s = parseInt(sys);
         const d = parseInt(dia);
+        // AHA Blood Pressure Categories
         if (s >= 180 || d >= 120) return { status: '⚠️ Crisis', color: '#991b1b', bg: '#fee2e2' };
-        if (s >= 140 || d >= 90) return { status: 'High', color: '#dc2626', bg: '#fecaca' };
-        if (s >= 130 || d >= 80) return { status: 'Elevated', color: '#d97706', bg: '#fef3c7' };
+        if (s >= 140 || d >= 90) return { status: 'High Stage 2', color: '#dc2626', bg: '#fecaca' };
+        if (s >= 130 || d >= 80) return { status: 'High Stage 1', color: '#ea580c', bg: '#ffedd5' };
+        if (s >= 120 && d < 80) return { status: 'Elevated', color: '#d97706', bg: '#fef3c7' };
         if (s >= 90 && d >= 60) return { status: '✓ Normal', color: '#059669', bg: '#d1fae5' };
         return { status: 'Low', color: '#7c3aed', bg: '#ede9fe' };
     }

@@ -19,6 +19,7 @@
     let weeklySummary: any = null;
     let loading = true;
     let selectedPeriod: 'week' | 'month' | 'year' = 'week';
+    let showBPInfo = false;
 
     $: chartResult = getChartData(trends, selectedPeriod);
     $: chartData = chartResult.data;
@@ -92,13 +93,17 @@
     }
 
     function getBPStatus(systolic: number, diastolic: number): { status: string; color: string; bg: string } {
+        // AHA Blood Pressure Categories
         if (systolic >= 180 || diastolic >= 120) {
             return { status: 'Crisis', color: '#991b1b', bg: '#fee2e2' };
         }
         if (systolic >= 140 || diastolic >= 90) {
-            return { status: 'High', color: '#dc2626', bg: '#fecaca' };
+            return { status: 'High Stage 2', color: '#dc2626', bg: '#fecaca' };
         }
         if (systolic >= 130 || diastolic >= 80) {
+            return { status: 'High Stage 1', color: '#ea580c', bg: '#ffedd5' };
+        }
+        if (systolic >= 120 && diastolic < 80) {
             return { status: 'Elevated', color: '#d97706', bg: '#fef3c7' };
         }
         if (systolic >= 90 && diastolic >= 60) {
@@ -188,7 +193,16 @@
                             <span class="bp-reading">{Math.round(weeklySummary.avg_diastolic || 0)}</span>
                         </div>
                         <div class="stat-label">Average BP (mmHg)</div>
-                        <div class="stat-status" style="color: {bpStatus.color}; background: {bpStatus.bg}">{bpStatus.status}</div>
+                        <div class="stat-status-row">
+                            <div class="stat-status" style="color: {bpStatus.color}; background: {bpStatus.bg}">{bpStatus.status}</div>
+                            <button class="info-btn" on:click={() => showBPInfo = true} aria-label="Blood pressure categories info">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="10"/>
+                                    <line x1="12" y1="16" x2="12" y2="12"/>
+                                    <line x1="12" y1="8" x2="12.01" y2="8"/>
+                                </svg>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -326,6 +340,74 @@
         </section>
     {/if}
 </div>
+
+<!-- BP Classification Info Modal -->
+{#if showBPInfo}
+    <div class="modal-overlay" on:click={() => showBPInfo = false} on:keydown={(e) => e.key === 'Escape' && (showBPInfo = false)} role="dialog" aria-modal="true">
+        <div class="modal-content" on:click|stopPropagation role="document">
+            <div class="modal-header">
+                <h2>🩺 Blood Pressure Categories</h2>
+                <button class="modal-close" on:click={() => showBPInfo = false} aria-label="Close">×</button>
+            </div>
+            <div class="modal-body">
+                <table class="bp-table">
+                    <thead>
+                        <tr>
+                            <th>Category</th>
+                            <th>Systolic</th>
+                            <th></th>
+                            <th>Diastolic</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="bp-normal">
+                            <td><span class="status-badge" style="background: #d1fae5; color: #059669">Normal</span></td>
+                            <td>&lt; 120</td>
+                            <td>and</td>
+                            <td>&lt; 80</td>
+                        </tr>
+                        <tr class="bp-elevated">
+                            <td><span class="status-badge" style="background: #fef3c7; color: #d97706">Elevated</span></td>
+                            <td>120-129</td>
+                            <td>and</td>
+                            <td>&lt; 80</td>
+                        </tr>
+                        <tr class="bp-high1">
+                            <td><span class="status-badge" style="background: #ffedd5; color: #ea580c">High Stage 1</span></td>
+                            <td>130-139</td>
+                            <td>or</td>
+                            <td>80-89</td>
+                        </tr>
+                        <tr class="bp-high2">
+                            <td><span class="status-badge" style="background: #fecaca; color: #dc2626">High Stage 2</span></td>
+                            <td>≥ 140</td>
+                            <td>or</td>
+                            <td>≥ 90</td>
+                        </tr>
+                        <tr class="bp-crisis">
+                            <td><span class="status-badge" style="background: #fee2e2; color: #991b1b">Crisis</span></td>
+                            <td>≥ 180</td>
+                            <td>or</td>
+                            <td>≥ 120</td>
+                        </tr>
+                        <tr class="bp-low">
+                            <td><span class="status-badge" style="background: #ede9fe; color: #7c3aed">Low</span></td>
+                            <td>&lt; 90</td>
+                            <td>or</td>
+                            <td>&lt; 60</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p class="bp-source">
+                    Source: <a href="https://www.heart.org/en/health-topics/high-blood-pressure/understanding-blood-pressure-readings" target="_blank" rel="noopener noreferrer">American Heart Association</a>
+                </p>
+                <p class="bp-note">
+                    ⚠️ This app is for tracking purposes only. Consult a healthcare professional for medical advice.
+                </p>
+            </div>
+        </div>
+    </div>
+{/if}
 
 <style>
     .dashboard {
@@ -738,5 +820,176 @@
         .reading-card {
             padding: var(--spacing-lg);
         }
+    }
+
+    /* Info Button */
+    .stat-status-row {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-sm);
+        margin-top: var(--spacing-xs);
+    }
+
+    .info-btn {
+        width: 28px;
+        height: 28px;
+        border: none;
+        background: transparent;
+        color: var(--text-muted);
+        border-radius: 50%;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+        padding: 0;
+    }
+
+    .info-btn:hover {
+        background: var(--primary-light);
+        color: var(--primary-color);
+        transform: scale(1.1);
+    }
+
+    .info-btn:active {
+        transform: scale(0.95);
+    }
+
+    .info-btn svg {
+        width: 18px;
+        height: 18px;
+    }
+
+    /* Modal Styles */
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.6);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        padding: var(--spacing-md);
+        backdrop-filter: blur(4px);
+    }
+
+    .modal-content {
+        background: var(--card-bg);
+        border-radius: var(--radius-lg);
+        max-width: 480px;
+        width: 100%;
+        max-height: 90vh;
+        overflow-y: auto;
+        box-shadow: var(--shadow-lg);
+        animation: modalSlideIn 0.2s ease-out;
+    }
+
+    @keyframes modalSlideIn {
+        from {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: var(--spacing-md) var(--spacing-lg);
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .modal-header h2 {
+        font-size: var(--font-lg);
+        margin: 0;
+    }
+
+    .modal-close {
+        width: 32px;
+        height: 32px;
+        border: none;
+        background: none;
+        font-size: 24px;
+        cursor: pointer;
+        color: var(--text-secondary);
+        border-radius: var(--radius-sm);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .modal-close:hover {
+        background: var(--bg-color);
+    }
+
+    .modal-body {
+        padding: var(--spacing-lg);
+    }
+
+    .bp-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: var(--font-sm);
+        margin-bottom: var(--spacing-lg);
+    }
+
+    .bp-table th,
+    .bp-table td {
+        padding: var(--spacing-sm) var(--spacing-xs);
+        text-align: center;
+    }
+
+    .bp-table th {
+        font-weight: 600;
+        color: var(--text-secondary);
+        border-bottom: 2px solid var(--border-color);
+    }
+
+    .bp-table td {
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .bp-table td:first-child {
+        text-align: left;
+    }
+
+    .status-badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: var(--radius-xl);
+        font-size: var(--font-xs);
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    .bp-source {
+        font-size: var(--font-sm);
+        color: var(--text-secondary);
+        margin-bottom: var(--spacing-sm);
+    }
+
+    .bp-source a {
+        color: var(--primary-color);
+        text-decoration: none;
+    }
+
+    .bp-source a:hover {
+        text-decoration: underline;
+    }
+
+    .bp-note {
+        font-size: var(--font-xs);
+        color: var(--text-muted);
+        background: var(--bg-color);
+        padding: var(--spacing-sm);
+        border-radius: var(--radius-sm);
+        margin: 0;
     }
 </style>

@@ -157,6 +157,16 @@ go run cmd/main.go
 3. Start the server: `./scripts/start.sh`
 4. Access from any device on your local network
 
+
+## Raspi Updates
+cd /home/vkku/blood_pressure_monitor
+
+git pull && docker build -t blood-pressure-monitor:latest . OR docker pull vkku/blood-pressure-monitor:latest
+
+cd /home/vkku/calibre-utils
+
+docker compose up -d --force-recreate blood-pressure-monitor
+
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
